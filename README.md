@@ -53,6 +53,8 @@ Then open `/Applications/PetTaskBuddy.app`.
 
 ## Install Test Build
 
+`CyberPet.zip` is an unsigned beta build with an ad-hoc signature. It is not Apple Developer signed or notarized.
+
 1. Download `CyberPet.zip`.
 2. Unzip the archive.
 3. Drag `CyberPet.app` to Applications.
