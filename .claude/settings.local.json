@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(swift build *)",
+      "Bash(python3 -c \"import json,glob; f=glob.glob\\('Assets/**/manifest.json',recursive=True\\)[0]; d=json.load\\(open\\(f\\)\\); print\\(f\\); print\\('sniff:', d['states'].get\\('sniff'\\)\\); print\\('walk:', d['states'].get\\('walk'\\)\\)\")",
+      "Bash(echo \"exit-grep:$?\")",
+      "Bash(xcode-select -p)",
+      "Bash(swift --version)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun --find swift)",
+      "Bash(osascript -e 'tell application \"PetTaskBuddy\" to quit')",
+      "Bash(pkill -f \"PetTaskBuddy.app/Contents/MacOS/PetTaskBuddy\")",
+      "Bash(rm -rf /Applications/PetTaskBuddy.app)",
+      "Bash(cp -R .build/app/PetTaskBuddy.app /Applications/)",
+      "Bash(xattr -dr com.apple.quarantine /Applications/PetTaskBuddy.app)",
+      "Bash(pkill -f \"PetTaskBuddy\")",
+      "Bash(rm -f ~/Library/Logs/PetTaskBuddy.log)",
+      "Bash(open .build/app/PetTaskBuddy.app)",
+      "Bash(awk '{print $11, $12}')",
+      "Read(//Users/liyexin/Library/Logs/**)",
+      "Bash(export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)",
+      "Bash(bash Tools/package-app.sh)",
+      "Read(//Users/liyexin/Documents/Codex/2026-05-29/new-chat/哈士奇像素图_按动作分类/12_嗅闻/**)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('Assets/pet/manifest.json'\\)\\); print\\('frameSize',d['frameSize'],'scale',d['scale']\\); print\\('sniff',d['states']['sniff']\\)\")",
+      "Bash(python3 -c \"from PIL import Image; im=Image.open\\('160abaad-9762-4f69-a099-d2c5fa305a4d.png'\\); print\\('size',im.size,'mode',im.mode\\)\")",
+      "Bash(python3 -c \"from PIL import Image; im=Image.open\\('Assets/pet/sniff.png'\\); print\\('size',im.size,'mode',im.mode\\)\")",
+      "Bash(python3)",
+      "Bash(cp /tmp/sniff_whitened.png Assets/pet/sniff.png)",
+      "Bash(md5 -q Assets/pet/sniff.png)",
+      "Bash(echo \"applied. new md5: $\\(md5 -q Assets/pet/sniff.png\\)\")",
+      "Bash(echo \"Assets:  $\\(md5 -q Assets/pet/sniff.png\\)\")",
+      "Bash(md5 -q .build/app/PetTaskBuddy.app/Contents/Resources/pet/sniff.png)",
+      "Bash(echo \"Bundle:  $\\(md5 -q .build/app/PetTaskBuddy.app/Contents/Resources/pet/sniff.png\\)\")",
+      "Bash(awk '{print $11}')",
+      "Bash(python3 -c \"from PIL import Image; im=Image.open\\('Assets/pet/run.png'\\); print\\('current run.png', im.size\\); import json; d=json.load\\(open\\('Assets/pet/manifest.json'\\)\\); print\\('manifest run:', d['states']['run']\\)\")",
+      "Bash(cp /tmp/run_new.png Assets/pet/run.png)",
+      "Bash(python3 -c \"from PIL import Image; print\\('new run.png', Image.open\\('Assets/pet/run.png'\\).size, 'md5', __import__\\('hashlib'\\).md5\\(open\\('Assets/pet/run.png','rb'\\).read\\(\\)\\).hexdigest\\(\\)\\)\")",
+      "Bash(md5 -q Assets/pet/run.png)",
+      "Bash(echo \"Assets run: $\\(md5 -q Assets/pet/run.png\\)\")",
+      "Bash(md5 -q .build/app/PetTaskBuddy.app/Contents/Resources/pet/run.png)",
+      "Bash(echo \"Bundle run: $\\(md5 -q .build/app/PetTaskBuddy.app/Contents/Resources/pet/run.png\\)\")"
+    ]
+  }
+}

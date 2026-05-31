@@ -1,0 +1,31 @@
+# Swift Package Manager
+.build/
+.build.copied-from-previous-session/
+.swiftpm/
+Package.resolved
+
+# Xcode
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build products
+*.app
+*.dSYM/
+*.ipa
+*.pkg
+
+# Local logs and temporary files
+*.log
+*.tmp
+*.swp
+*~

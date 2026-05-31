@@ -1,0 +1,103 @@
+{
+  "frameSize": 64,
+  "scale": 3,
+  "transition": {
+    "crossfadeMs": 100
+  },
+  "states": {
+    "run": {
+      "frames": 1,
+      "fps": 14,
+      "type": "loop"
+    },
+    "pee": {
+      "frames": 1,
+      "fps": 6,
+      "type": "oneshot",
+      "returnTo": "idle"
+    },
+    "stretch": {
+      "frames": 3,
+      "fps": 6,
+      "type": "oneshot",
+      "returnTo": "idle"
+    },
+    "sit_front": {
+      "frames": 1,
+      "fps": 6,
+      "type": "loop"
+    },
+    "sleep": {
+      "frames": 4,
+      "fps": 2,
+      "type": "loop"
+    },
+    "walk": {
+      "frames": 2,
+      "fps": 8,
+      "type": "loop"
+    },
+    "happy": {
+      "frames": 1,
+      "fps": 8,
+      "type": "oneshot",
+      "returnTo": "idle"
+    },
+    "listless": {
+      "frames": 1,
+      "fps": 2,
+      "type": "loop"
+    },
+    "drink": {
+      "frames": 1,
+      "fps": 6,
+      "type": "oneshot",
+      "returnTo": "idle"
+    },
+    "eat": {
+      "frames": 1,
+      "fps": 6,
+      "type": "oneshot",
+      "returnTo": "idle"
+    },
+    "idle": {
+      "frames": 1,
+      "fps": 4,
+      "type": "loop"
+    },
+    "sniff": {
+      "frames": 5,
+      "fps": 6,
+      "type": "loop"
+    },
+    "look_front": {
+      "frames": 2,
+      "fps": 6,
+      "type": "oneshot",
+      "returnTo": "idle"
+    },
+    "lie_down": {
+      "frames": 1,
+      "fps": 6,
+      "type": "loop"
+    },
+    "shake": {
+      "frames": 3,
+      "fps": 6,
+      "type": "loop"
+    },
+    "scratch": {
+      "frames": 3,
+      "fps": 6,
+      "type": "loop"
+    }
+  },
+  "bridges": {
+    "idle->sleep": "lie_down",
+    "sleep->idle": "get_up",
+    "idle->eat": "head_down",
+    "eat->idle": "head_up",
+    "idle->drink": "head_down",
+    "drink->idle": "head_up"
+  }
+}
