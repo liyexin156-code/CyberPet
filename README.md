@@ -51,6 +51,13 @@ cp -R .build/app/PetTaskBuddy.app /Applications/
 
 Then open `/Applications/PetTaskBuddy.app`.
 
+## Install Test Build
+
+1. Download `CyberPet.zip`.
+2. Unzip the archive.
+3. Drag `CyberPet.app` to Applications.
+4. If macOS says it cannot verify the developer, right-click the app and choose Open.
+
 ## Tests
 
 ```sh
