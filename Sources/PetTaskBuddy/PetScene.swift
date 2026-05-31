@@ -330,6 +330,7 @@ final class PetScene: SKScene {
         menu.addItem(NSMenuItem(title: "疲惫想睡", action: #selector(ContextMenuTarget.performSleepy), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "嗅闻一下", action: #selector(ContextMenuTarget.performSniff), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "尿尿", action: #selector(ContextMenuTarget.performPee), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "抖抖毛", action: #selector(ContextMenuTarget.performShake), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "挠挠痒", action: #selector(ContextMenuTarget.performScratch), keyEquivalent: ""))
         menu.addItem(.separator())
@@ -405,6 +406,11 @@ private final class ContextMenuTarget: NSObject {
     @MainActor
     @objc func performSniff() {
         request(.sniff)
+    }
+
+    @MainActor
+    @objc func performPee() {
+        request(.pee)
     }
 
     @MainActor

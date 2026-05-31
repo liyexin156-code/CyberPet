@@ -12,6 +12,7 @@ enum PetAutonomousBehaviorKind: String {
     case lieDown
     case sleep
     case listless
+    case pee
 }
 
 // Mouse Attention ("鼠标吸引"): a fast cursor pass near the dog makes it trot
@@ -67,6 +68,8 @@ enum PetAutonomousBehaviorConfig {
     static let manualPerformanceStepGap: TimeInterval = 0.35
     static let manualSleepLieDownHold: TimeInterval = 1.4
     static let manualSideLieHoldDuration: TimeInterval = 180
+    static let sniffPeeChance: Double = 0.25
+    static let peeHoldDuration: TimeInterval = 3.0
 
     static let idleHoldRange: ClosedRange<TimeInterval> = 4.0...9.0
     static let sitHoldRange: ClosedRange<TimeInterval> = 4.0...8.0
@@ -196,6 +199,8 @@ enum PetAutonomousBehaviorConfig {
             sitHoldRange
         case .sniff:
             sniffHoldRange
+        case .pee:
+            peeHoldDuration...peeHoldDuration
         case .stretch:
             stretchHoldRange
         case .yawn, .shake, .scratch:
@@ -218,6 +223,7 @@ enum PetManualPerformanceKind {
     case idle
     case sleep
     case sideLie
+    case pee
     case sit
     case sniff
     case happy

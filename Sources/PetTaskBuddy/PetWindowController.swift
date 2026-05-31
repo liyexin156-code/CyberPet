@@ -276,8 +276,17 @@ final class PetWindowController: NSObject {
 
     private func performDailySniff() {
         performSniffWalk { [weak self] in
-            self?.finishAutonomousBehavior()
+            self?.finishDailySniff()
         }
+    }
+
+    private func finishDailySniff() {
+        guard !isRenderingPausedForVisibility, !isDragging, !isRewarding, !isManualPerformance else { return }
+        if Double.random(in: 0..<1) < PetAutonomousBehaviorConfig.sniffPeeChance {
+            performAutonomousPee()
+            return
+        }
+        finishAutonomousBehavior()
     }
 
     // Plays the looping sniff animation while the window drifts slowly forward.
@@ -362,6 +371,16 @@ final class PetWindowController: NSObject {
         let stayDuration = TimeInterval.random(in: PetAutonomousBehaviorConfig.holdRange(for: lastDailyBehavior ?? .idle))
         PetDebugLog.write("Daily behavior complete; staying \(String(format: "%.2f", stayDuration))s")
         scheduleNextBehavior(after: stayDuration)
+    }
+
+    private func performAutonomousPee() {
+        guard !isRenderingPausedForVisibility, !isDragging, !isRewarding, !isManualPerformance else { return }
+        currentBehavior = .pee
+        lastDailyBehavior = .pee
+        movementTimer?.invalidate()
+        movementTimer = nil
+        PetDebugLog.write("Starting daily behavior pee")
+        playPeeAnimation(isManual: false)
     }
 
     private func interruptAutonomousBehavior(playIdle: Bool) {
@@ -687,6 +706,8 @@ final class PetWindowController: NSObject {
             .sleep
         case .listless:
             .listless
+        case .pee:
+            .pee
         }
     }
 
@@ -754,6 +775,8 @@ final class PetWindowController: NSObject {
             performManualStationary(.sleep)
         case .sideLie:
             performManualSideLie()
+        case .pee:
+            performManualPee()
         case .sit:
             performManualStationary(.sitFront)
         case .happy:
@@ -851,6 +874,12 @@ final class PetWindowController: NSObject {
     private func performManualSideLie() {
         scene.forcePlay(.lieDown)
         scheduleManualFinish(after: PetAutonomousBehaviorConfig.manualSideLieHoldDuration)
+    }
+
+    private func performManualPee() {
+        movementTimer?.invalidate()
+        movementTimer = nil
+        playPeeAnimation(isManual: true)
     }
 
     private func performManualSleepy() {
@@ -982,6 +1011,34 @@ final class PetWindowController: NSObject {
         behaviorTimer?.invalidate()
         behaviorTimer = timer
         RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func playPeeAnimation(isManual: Bool) {
+        let animationDuration = scene.animationDuration(for: .pee)
+        let holdDuration = max(PetAutonomousBehaviorConfig.peeHoldDuration - animationDuration, 0)
+        scene.playOneCycle(
+            .pee,
+            timePerFrame: PetAutonomousBehaviorConfig.timePerFrame(for: .pee),
+            holdDuration: holdDuration
+        ) { [weak self] in
+            self?.finishPee(isManual: isManual)
+        }
+    }
+
+    private func finishPee(isManual: Bool) {
+        guard !isRewarding, !isDragging else { return }
+        behaviorTimer?.invalidate()
+        behaviorTimer = nil
+        movementTimer?.invalidate()
+        movementTimer = nil
+        scene.forcePlay(.idle)
+
+        if isManual {
+            isManualPerformance = false
+            currentManualPerformance = nil
+        }
+        currentBehavior = nil
+        scheduleNextBehavior()
     }
 
     private func finishManualPerformance(didSleep: Bool = false) {
