@@ -20,7 +20,7 @@ final class PeeBehaviorSourceTests: XCTestCase {
     func testContextMenuRequestsManualPee() throws {
         let sceneSource = try source("Sources/PetTaskBuddy/PetScene.swift")
 
-        XCTAssertTrue(sceneSource.contains("title: \"尿尿\""))
+        XCTAssertTrue(sceneSource.contains("LocalizationManager.shared.string(.menuPee)"))
         XCTAssertTrue(sceneSource.contains("#selector(ContextMenuTarget.performPee)"))
         XCTAssertTrue(sceneSource.contains("func performPee()"))
         XCTAssertTrue(sceneSource.contains("request(.pee)"))

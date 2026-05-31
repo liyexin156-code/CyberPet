@@ -12,7 +12,7 @@ final class SideLieManualActionTests: XCTestCase {
     func testContextMenuRequestsSideLieManualPerformance() throws {
         let sceneSource = try source("Sources/PetTaskBuddy/PetScene.swift")
 
-        XCTAssertTrue(sceneSource.contains("title: \"侧躺\""))
+        XCTAssertTrue(sceneSource.contains("LocalizationManager.shared.string(.menuSideLie)"))
         XCTAssertTrue(sceneSource.contains("#selector(ContextMenuTarget.performSideLie)"))
         XCTAssertTrue(sceneSource.contains("func performSideLie()"))
         XCTAssertTrue(sceneSource.contains("request(.sideLie)"))

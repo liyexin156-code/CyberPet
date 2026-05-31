@@ -4,6 +4,13 @@ CyberPet is a small macOS desktop pet built with Swift, SwiftUI, SpriteKit, and 
 
 ## Features
 
+- Chinese / English language switching
+- Desktop pet interactions
+- Sleep
+- Sniff
+- Pee
+- Drink Water
+- Task integration
 - Desktop pet window with transparent background
 - Pixel sprite animations loaded from `Assets/pet`
 - Daily task list with completion tracking
@@ -30,6 +37,11 @@ swift build
 ```sh
 swift run PetTaskBuddy
 ```
+
+## Usage
+
+- Right click the pet.
+- Choose Language → 中文 / English.
 
 ## Package App
 

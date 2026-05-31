@@ -12,13 +12,6 @@ enum ScheduleItemKind: String, Codable, CaseIterable, Identifiable {
     case reminder
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .task: "任务"
-        case .reminder: "提醒"
-        }
-    }
 }
 
 @Model

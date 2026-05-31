@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftData
 import SwiftUI
 
@@ -7,6 +8,7 @@ final class MainPanelWindowController: NSWindowController {
     private let modelContainer: ModelContainer
     private let petStateEngine: PetStateEngine
     private let scheduleCoordinator: ScheduleCoordinator
+    private var cancellables: Set<AnyCancellable> = []
 
     init(
         modelContainer: ModelContainer,
@@ -21,6 +23,7 @@ final class MainPanelWindowController: NSWindowController {
             .modelContainer(modelContainer)
             .environmentObject(petStateEngine)
             .environmentObject(scheduleCoordinator)
+            .environmentObject(LocalizationManager.shared)
         let hostingController = NSHostingController(rootView: rootView)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 440, height: 600),
@@ -28,11 +31,17 @@ final class MainPanelWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "桌宠任务伙伴"
+        window.title = LocalizationManager.shared.string(.appTitle)
         window.contentViewController = hostingController
         window.isReleasedWhenClosed = false
 
         super.init(window: window)
+
+        LocalizationManager.shared.$language
+            .sink { [weak window] _ in
+                window?.title = LocalizationManager.shared.string(.appTitle)
+            }
+            .store(in: &cancellables)
     }
 
     @available(*, unavailable)
@@ -57,6 +66,7 @@ final class MainPanelWindowController: NSWindowController {
 }
 
 struct MainPanelView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     @State private var selectedTab: MainPanelTab = .today
 
     var body: some View {
@@ -67,7 +77,7 @@ struct MainPanelView: View {
                         selectedTab = tab
                     } label: {
                         VStack(spacing: 6) {
-                            Text(tab.title)
+                            Text(localization.string(tab.localizationKey))
                                 .foregroundStyle(selectedTab == tab ? PixelTheme.cyan : PixelTheme.secondaryText)
                             Rectangle()
                                 .fill(selectedTab == tab ? PixelTheme.cyan : Color.clear)
@@ -107,10 +117,10 @@ enum MainPanelTab: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var localizationKey: LocalizationKey {
         switch self {
-        case .today: "今日"
-        case .schedule: "日程"
+        case .today: .todayTab
+        case .schedule: .scheduleTab
         }
     }
 }
@@ -118,6 +128,7 @@ enum MainPanelTab: String, CaseIterable, Identifiable {
 struct TodayTaskView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var petStateEngine: PetStateEngine
+    @EnvironmentObject private var localization: LocalizationManager
     @AppStorage("thoughtBubbleAlwaysVisible") private var thoughtBubbleAlwaysVisible = true
     @Query private var tasks: [DailyTask]
 
@@ -147,15 +158,15 @@ struct TodayTaskView: View {
     }
 
     private var thoughtBubbleSetting: some View {
-        Toggle("思考泡泡常驻显示", isOn: $thoughtBubbleAlwaysVisible)
+        Toggle(localization.string(.thoughtBubbleAlwaysVisible), isOn: $thoughtBubbleAlwaysVisible)
             .toggleStyle(PixelToggleButtonStyle())
-            .help("关闭后，悬停到狗狗时再显示思考泡泡")
+            .help(localization.string(.thoughtBubbleHelp))
     }
 
     private var petStateSummary: some View {
         VStack(spacing: 8) {
-            MeterRow(title: "饱食度", value: petStateEngine.fullness)
-            MeterRow(title: "心情", value: petStateEngine.mood)
+            MeterRow(title: localization.string(.fullness), value: petStateEngine.fullness)
+            MeterRow(title: localization.string(.mood), value: petStateEngine.mood)
         }
         .padding(12)
         .pixelCard()
@@ -163,9 +174,9 @@ struct TodayTaskView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("今天的小任务")
+            Text(localization.string(.todayTasksTitle))
                 .font(PixelTheme.monoTitle)
-            Text("写下一个今天愿意照顾的小目标。")
+            Text(localization.string(.todayTasksSubtitle))
                 .font(PixelTheme.monoCaption)
                 .foregroundStyle(PixelTheme.secondaryText)
         }
@@ -173,18 +184,18 @@ struct TodayTaskView: View {
 
     private var addTaskForm: some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextField("添加一个小任务", text: $newTaskTitle)
+            TextField(localization.string(.addTaskPlaceholder), text: $newTaskTitle)
                 .textFieldStyle(PixelTextFieldStyle())
                 .onSubmit(addTask)
 
-            TextField("备注，可不填", text: $newTaskNote)
+            TextField(localization.string(.noteOptionalPlaceholder), text: $newTaskNote)
                 .textFieldStyle(PixelTextFieldStyle())
                 .onSubmit(addTask)
 
             HStack {
                 Spacer()
                 Button(action: addTask) {
-                    Label("添加", systemImage: "plus")
+                    Label(localization.string(.addButton), systemImage: "plus")
                 }
                 .disabled(newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .keyboardShortcut(.return, modifiers: [.command])
@@ -199,9 +210,9 @@ struct TodayTaskView: View {
             if tasks.isEmpty {
                 Spacer()
                 ContentUnavailableView(
-                    "今天还很清爽",
+                    localization.string(.emptyTodayTitle),
                     systemImage: "checklist",
-                    description: Text("先加一件很小、能开始的事就好。")
+                    description: Text(localization.string(.emptyTodayDescription))
                 )
                 Spacer()
             } else {
@@ -256,6 +267,7 @@ struct TodayTaskView: View {
 struct TaskRow: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var petStateEngine: PetStateEngine
+    @EnvironmentObject private var localization: LocalizationManager
     @Bindable var task: DailyTask
     let onDelete: () -> Void
 
@@ -273,7 +285,7 @@ struct TaskRow: View {
                     .padding(.top, 2)
                 VStack(alignment: .leading, spacing: 3) {
                     taskText
-                    Text("提醒")
+                    Text(localization.string(.reminder))
                         .font(.caption2)
                         .foregroundStyle(PixelTheme.secondaryText)
                 }
@@ -286,7 +298,7 @@ struct TaskRow: View {
             }
             .buttonStyle(.borderless)
             .foregroundStyle(PixelTheme.pink)
-            .help("删除任务")
+            .help(localization.string(.deleteTaskHelp))
         }
         .padding(.vertical, 4)
     }
@@ -330,6 +342,7 @@ struct TaskRow: View {
 struct ScheduleListView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var scheduleCoordinator: ScheduleCoordinator
+    @EnvironmentObject private var localization: LocalizationManager
     @Query(sort: \ScheduleItem.createdAt, order: .forward) private var schedules: [ScheduleItem]
 
     @State private var editingItem: ScheduleItem?
@@ -365,21 +378,21 @@ struct ScheduleListView: View {
     private var scheduleList: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("日程")
+                Text(localization.string(.scheduleTitle))
                     .font(PixelTheme.monoTitle)
                 Spacer()
                 Button(action: resetForm) {
-                    Label("新建", systemImage: "plus")
+                    Label(localization.string(.newScheduleButton), systemImage: "plus")
                 }
                 .buttonStyle(PixelSecondaryButtonStyle())
-                .help("新建日程")
+                .help(localization.string(.newScheduleHelp))
             }
 
             if schedules.isEmpty {
                 ContentUnavailableView(
-                    "还没有固定日程",
+                    localization.string(.emptyScheduleTitle),
                     systemImage: "calendar.badge.plus",
-                    description: Text("把每天或每周会重复的小事放在这里。")
+                    description: Text(localization.string(.emptyScheduleDescription))
                 )
             } else {
                 VStack(spacing: 8) {
@@ -418,25 +431,25 @@ struct ScheduleListView: View {
 
     private var editor: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(editingItem == nil ? "新建日程" : "编辑日程")
+            Text(editingItem == nil ? localization.string(.newScheduleTitle) : localization.string(.editScheduleTitle))
                 .font(PixelTheme.monoTitle)
 
-            TextField("标题", text: $title)
+            TextField(localization.string(.titlePlaceholder), text: $title)
                 .textFieldStyle(PixelTextFieldStyle())
 
-            TextField("备注，可不填", text: $note)
+            TextField(localization.string(.noteOptionalPlaceholder), text: $note)
                 .textFieldStyle(PixelTextFieldStyle())
 
-            Picker("类型", selection: $kind) {
+            Picker(localization.string(.scheduleKindPicker), selection: $kind) {
                 ForEach(ScheduleItemKind.allCases) { kind in
-                    Text(kind.title).tag(kind)
+                    Text(localization.string(kind.localizationKey)).tag(kind)
                 }
             }
             .pickerStyle(.segmented)
 
-            Picker("规则", selection: $recurrenceType) {
+            Picker(localization.string(.scheduleRulePicker), selection: $recurrenceType) {
                 ForEach(RecurrenceType.allCases) { type in
-                    Text(type.title).tag(type)
+                    Text(localization.string(type.localizationKey)).tag(type)
                 }
             }
             .pickerStyle(.segmented)
@@ -451,7 +464,7 @@ struct ScheduleListView: View {
                     totalSecondsText: $intervalTotalSecondsText
                 )
             } else {
-                Toggle("启用提醒时间", isOn: $hasReminderTime)
+                Toggle(localization.string(.enableReminderTime), isOn: $hasReminderTime)
                     .toggleStyle(PixelToggleButtonStyle())
                 if hasReminderTime {
                     TimeOfDaySecondsInput(
@@ -462,12 +475,12 @@ struct ScheduleListView: View {
                 }
             }
 
-            Toggle("启用这条日程", isOn: $isActive)
+            Toggle(localization.string(.enableSchedule), isOn: $isActive)
                 .toggleStyle(PixelToggleButtonStyle())
 
             HStack {
                 Button(role: .destructive, action: deleteEditingItem) {
-                    Label("删除", systemImage: "trash")
+                    Label(localization.string(.deleteButton), systemImage: "trash")
                 }
                 .disabled(editingItem == nil)
                 .buttonStyle(PixelSecondaryButtonStyle())
@@ -476,7 +489,7 @@ struct ScheduleListView: View {
                 Spacer()
 
                 Button(action: save) {
-                    Label(editingItem == nil ? "添加" : "保存", systemImage: "checkmark")
+                    Label(editingItem == nil ? localization.string(.addButton) : localization.string(.saveButton), systemImage: "checkmark")
                 }
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .keyboardShortcut(.return, modifiers: [.command])
@@ -495,7 +508,7 @@ struct ScheduleListView: View {
             EmptyView()
         case .weekly:
             VStack(alignment: .leading, spacing: 8) {
-                Text("选择星期")
+                Text(localization.string(.chooseWeekdays))
                     .font(PixelTheme.monoCaption.weight(.medium))
                     .foregroundStyle(PixelTheme.secondaryText)
                 HStack(spacing: 6) {
@@ -516,18 +529,26 @@ struct ScheduleListView: View {
             }
         case .date:
             VStack(alignment: .leading, spacing: 8) {
-                DatePicker("日期", selection: $recurrenceDate, displayedComponents: .date)
-                Toggle("每年重复", isOn: $yearlyRepeat)
+                DatePicker(localization.string(.datePicker), selection: $recurrenceDate, displayedComponents: .date)
+                Toggle(localization.string(.repeatYearly), isOn: $yearlyRepeat)
                     .toggleStyle(PixelToggleButtonStyle())
             }
         }
     }
 
     private var weekdayOptions: [(label: String, value: Int)] {
-        [
-            ("日", 1), ("一", 2), ("二", 3), ("三", 4),
-            ("四", 5), ("五", 6), ("六", 7)
-        ]
+        switch localization.language {
+        case .chinese:
+            [
+                ("日", 1), ("一", 2), ("二", 3), ("三", 4),
+                ("四", 5), ("五", 6), ("六", 7)
+            ]
+        case .english:
+            [
+                ("Sun", 1), ("Mon", 2), ("Tue", 3), ("Wed", 4),
+                ("Thu", 5), ("Fri", 6), ("Sat", 7)
+            ]
+        }
     }
 
     private func save() {
@@ -623,7 +644,7 @@ struct ScheduleListView: View {
     }
 
     private func summary(for item: ScheduleItem) -> String {
-        var parts: [String] = [item.kind.title, recurrenceSummary(for: item)]
+        var parts: [String] = [localization.string(item.kind.localizationKey), recurrenceSummary(for: item)]
         if let reminder = item.reminderTime {
             let hour = String(format: "%02d", reminder.hour ?? 0)
             let minute = String(format: "%02d", reminder.minute ?? 0)
@@ -631,7 +652,7 @@ struct ScheduleListView: View {
             parts.append("\(hour):\(minute):\(second)")
         }
         if !item.isActive {
-            parts.append("已停用")
+            parts.append(localization.string(.inactiveSummary))
         }
         return parts.joined(separator: " · ")
     }
@@ -639,19 +660,20 @@ struct ScheduleListView: View {
     private func recurrenceSummary(for item: ScheduleItem) -> String {
         switch item.recurrence.type {
         case .interval:
-            return "每 \(formatInterval(item.intervalSeconds ?? ReminderTriggerConfig.defaultIntervalSeconds))"
+            return "\(localization.string(.everyPrefix)) \(formatInterval(item.intervalSeconds ?? ReminderTriggerConfig.defaultIntervalSeconds))"
         case .daily:
-            return "每天"
+            return localization.string(.everyDay)
         case .weekly:
             let labels = (item.weekdays ?? []).compactMap { weekday in
                 weekdayOptions.first(where: { $0.value == weekday })?.label
             }
-            return labels.isEmpty ? "未选星期" : "每周" + labels.joined(separator: "")
+            return labels.isEmpty ? localization.string(.noWeekdaySelected) : localization.string(.weeklyPrefix) + labels.joined(separator: localization.language == .english ? " " : "")
         case .date:
             let formatter = DateFormatter()
             formatter.dateStyle = .medium
-            let dateText = item.recurrence.date.map { formatter.string(from: $0) } ?? "未选日期"
-            return item.yearlyRepeat ? "\(dateText) 每年" : dateText
+            formatter.locale = localization.language.locale
+            let dateText = item.recurrence.date.map { formatter.string(from: $0) } ?? localization.string(.noDateSelected)
+            return item.yearlyRepeat ? "\(dateText) \(localization.string(.yearlySuffix))" : dateText
         }
     }
 
@@ -679,34 +701,35 @@ struct ScheduleListView: View {
         let minutes = (clamped % 3600) / 60
         let seconds = clamped % 60
         if hours > 0 {
-            return "\(hours)时\(minutes)分\(seconds)秒"
+            return "\(hours)\(localization.string(.hourUnit)) \(minutes)\(localization.string(.minuteUnit)) \(seconds)\(localization.string(.secondUnit))"
         }
         if minutes > 0 {
-            return "\(minutes)分\(seconds)秒"
+            return "\(minutes)\(localization.string(.minuteUnit)) \(seconds)\(localization.string(.secondUnit))"
         }
-        return "\(seconds)秒"
+        return "\(seconds)\(localization.string(.secondUnit))"
     }
 }
 
 private struct TimeOfDaySecondsInput: View {
+    @EnvironmentObject private var localization: LocalizationManager
     @Binding var hour: Int
     @Binding var minute: Int
     @Binding var second: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("提醒时刻")
+            Text(localization.string(.reminderTimeTitle))
                 .font(PixelTheme.monoCaption.weight(.medium))
                 .foregroundStyle(PixelTheme.secondaryText)
             HStack(spacing: 8) {
                 Stepper(value: $hour, in: 0...23) {
-                    Text("\(hour) 时")
+                    Text("\(hour) \(localization.string(.hourUnit))")
                 }
                 Stepper(value: $minute, in: 0...59) {
-                    Text("\(minute) 分")
+                    Text("\(minute) \(localization.string(.minuteUnit))")
                 }
                 Stepper(value: $second, in: 0...59) {
-                    Text("\(second) 秒")
+                    Text("\(second) \(localization.string(.secondUnit))")
                 }
             }
         }
@@ -714,6 +737,7 @@ private struct TimeOfDaySecondsInput: View {
 }
 
 private struct IntervalSecondsInput: View {
+    @EnvironmentObject private var localization: LocalizationManager
     @Binding var hours: Int
     @Binding var minutes: Int
     @Binding var seconds: Int
@@ -721,21 +745,21 @@ private struct IntervalSecondsInput: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("间隔时长")
+            Text(localization.string(.intervalDurationTitle))
                 .font(PixelTheme.monoCaption.weight(.medium))
                 .foregroundStyle(PixelTheme.secondaryText)
             HStack(spacing: 8) {
                 Stepper(value: hoursBinding, in: 0...23) {
-                    Text("\(hours) 时")
+                    Text("\(hours) \(localization.string(.hourUnit))")
                 }
                 Stepper(value: minutesBinding, in: 0...59) {
-                    Text("\(minutes) 分")
+                    Text("\(minutes) \(localization.string(.minuteUnit))")
                 }
                 Stepper(value: secondsBinding, in: 0...59) {
-                    Text("\(seconds) 秒")
+                    Text("\(seconds) \(localization.string(.secondUnit))")
                 }
             }
-            TextField("总秒数，比如 90", text: Binding(
+            TextField(localization.string(.totalSecondsPlaceholder), text: Binding(
                 get: { totalSecondsText },
                 set: { newValue in
                     totalSecondsText = newValue.filter(\.isNumber)

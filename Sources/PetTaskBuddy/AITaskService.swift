@@ -102,7 +102,7 @@ final class AITaskService: ObservableObject {
             let context = ModelContext(modelContainer)
             let goals = try activeGoals(in: context)
             guard !goals.isEmpty else {
-                draftStore.message = "先写下一个长期目标，我再帮你拆小任务。"
+                draftStore.message = LocalizationManager.shared.string(.aiNoGoalMessage)
                 return
             }
 
@@ -118,10 +118,12 @@ final class AITaskService: ObservableObject {
             )
             let drafts = try parseDrafts(from: response)
             draftStore.drafts = Array(drafts.prefix(count))
-            draftStore.message = draftStore.drafts.isEmpty ? "现在没想出合适的小任务，先手动加几个吧。" : "我先想了这些，可以改一改再确认。"
+            draftStore.message = draftStore.drafts.isEmpty
+                ? LocalizationManager.shared.string(.aiNoDraftsMessage)
+                : LocalizationManager.shared.string(.aiDraftsReadyMessage)
             UserDefaults.standard.set(todayKey(), forKey: "lastAIGenerationDate")
         } catch {
-            draftStore.message = "现在连不上，先手动加几个吧。"
+            draftStore.message = LocalizationManager.shared.string(.aiOfflineMessage)
         }
     }
 
@@ -145,9 +147,9 @@ final class AITaskService: ObservableObject {
         do {
             try context.save()
             draftStore.drafts = []
-            draftStore.message = "已放进今天的小任务。"
+            draftStore.message = LocalizationManager.shared.string(.aiConfirmedMessage)
         } catch {
-            draftStore.message = "保存时有点卡住了，稍后再试试。"
+            draftStore.message = LocalizationManager.shared.string(.aiSaveFailedMessage)
         }
     }
 

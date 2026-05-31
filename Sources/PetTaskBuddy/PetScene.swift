@@ -318,23 +318,25 @@ final class PetScene: SKScene {
 
     private func openContextMenu(with event: NSEvent) {
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "伸懒腰", action: #selector(ContextMenuTarget.performStretch), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "走一小段", action: #selector(ContextMenuTarget.performWalk), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "待机", action: #selector(ContextMenuTarget.performIdle), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "睡觉", action: #selector(ContextMenuTarget.performSleep), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "侧躺", action: #selector(ContextMenuTarget.performSideLie), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "坐一会儿", action: #selector(ContextMenuTarget.performSit), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuStretch), action: #selector(ContextMenuTarget.performStretch), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuWalk), action: #selector(ContextMenuTarget.performWalk), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuIdle), action: #selector(ContextMenuTarget.performIdle), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuSleep), action: #selector(ContextMenuTarget.performSleep), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuSideLie), action: #selector(ContextMenuTarget.performSideLie), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuSit), action: #selector(ContextMenuTarget.performSit), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "兴奋一下", action: #selector(ContextMenuTarget.performHappy), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "无聊乱逛", action: #selector(ContextMenuTarget.performRoam), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "疲惫想睡", action: #selector(ContextMenuTarget.performSleepy), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuHappy), action: #selector(ContextMenuTarget.performHappy), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuRoam), action: #selector(ContextMenuTarget.performRoam), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuSleepy), action: #selector(ContextMenuTarget.performSleepy), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "嗅闻一下", action: #selector(ContextMenuTarget.performSniff), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "尿尿", action: #selector(ContextMenuTarget.performPee), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "抖抖毛", action: #selector(ContextMenuTarget.performShake), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "挠挠痒", action: #selector(ContextMenuTarget.performScratch), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuSniff), action: #selector(ContextMenuTarget.performSniff), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuPee), action: #selector(ContextMenuTarget.performPee), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuShake), action: #selector(ContextMenuTarget.performShake), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuScratch), action: #selector(ContextMenuTarget.performScratch), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "退出", action: #selector(ContextMenuTarget.exit), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuLanguageSwitch), action: #selector(ContextMenuTarget.toggleLanguage), keyEquivalent: ""))
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuQuit), action: #selector(ContextMenuTarget.exit), keyEquivalent: "q"))
         ContextMenuTarget.shared.scene = self
         menu.items.forEach { $0.target = ContextMenuTarget.shared }
         NSMenu.popUpContextMenu(menu, with: event, for: view ?? NSView())
@@ -426,6 +428,11 @@ private final class ContextMenuTarget: NSObject {
     @MainActor
     @objc func performScratch() {
         request(.scratch)
+    }
+
+    @MainActor
+    @objc func toggleLanguage() {
+        LocalizationManager.shared.toggleLanguage()
     }
 
     @MainActor

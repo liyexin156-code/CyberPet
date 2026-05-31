@@ -68,8 +68,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func presentStartupError(_ error: Error) {
         let alert = NSAlert()
-        alert.messageText = "任务数据暂时打不开"
-        alert.informativeText = "请稍后再试，或检查本机存储权限。\n\n\(error.localizedDescription)"
+        alert.messageText = LocalizationManager.shared.string(.startupErrorTitle)
+        alert.informativeText = "\(LocalizationManager.shared.string(.startupErrorMessage))\n\n\(error.localizedDescription)"
         alert.alertStyle = .warning
         alert.runModal()
     }

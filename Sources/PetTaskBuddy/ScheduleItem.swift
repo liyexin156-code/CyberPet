@@ -8,15 +8,6 @@ enum RecurrenceType: String, Codable, CaseIterable, Identifiable {
     case interval
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .daily: "每天"
-        case .weekly: "周几"
-        case .date: "特定日期"
-        case .interval: "间隔"
-        }
-    }
 }
 
 struct Recurrence: Codable, Equatable {

@@ -14,6 +14,7 @@ final class ThoughtBubbleWindowController: NSWindowController {
         let rootView = ThoughtBubbleRootView(visibilityState: visibilityState)
             .modelContainer(modelContainer)
             .environmentObject(petStateEngine)
+            .environmentObject(LocalizationManager.shared)
         let hostingController = NSHostingController(rootView: rootView)
         let panel = ThoughtBubblePanel(
             contentRect: NSRect(origin: .zero, size: ThoughtBubbleLayout.windowSize),
@@ -138,6 +139,7 @@ final class ThoughtBubbleVisibilityState: ObservableObject {
 private struct ThoughtBubbleRootView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var petStateEngine: PetStateEngine
+    @EnvironmentObject private var localization: LocalizationManager
     @ObservedObject var visibilityState: ThoughtBubbleVisibilityState
     @AppStorage("thoughtBubbleAlwaysVisible") private var alwaysVisible = true
 
@@ -230,6 +232,7 @@ private struct ThoughtBubbleRootView: View {
 }
 
 private struct ThoughtBubbleClusterView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     let visibleItems: [DailyTask]
     let overflowCount: Int
     let showDoneBubble: Bool
@@ -257,7 +260,7 @@ private struct ThoughtBubbleClusterView: View {
 
             if showDoneBubble {
                 ThoughtBubblePill(delay: 0, horizontalOffset: 0) {
-                    Text("今天都照顾好啦～")
+                    Text(localization.string(.allCaredForToday))
                         .font(PixelTheme.monoCaption.weight(.medium))
                         .foregroundStyle(PixelTheme.text)
                 }
@@ -338,6 +341,7 @@ private struct ThoughtBubblePill<Content: View>: View {
 }
 
 private struct ThoughtBubbleItemView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     let item: DailyTask
     let reminderTimeText: String?
     let onComplete: () -> Void
@@ -353,7 +357,7 @@ private struct ThoughtBubbleItemView: View {
                         .frame(width: 14, height: 14)
                 }
                 .buttonStyle(.plain)
-                .help("完成")
+                .help(localization.string(.completeHelp))
             } else {
                 Image(systemName: "bell.fill")
                     .foregroundStyle(PixelTheme.amber)

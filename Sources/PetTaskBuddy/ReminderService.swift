@@ -72,7 +72,9 @@ final class ReminderService: NSObject, ObservableObject {
         guard date > Date() else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = schedule.kind == .task ? "今天的小任务" : "温柔提醒"
+        content.title = schedule.kind == .task
+            ? LocalizationManager.shared.string(.notificationTaskTitle)
+            : LocalizationManager.shared.string(.notificationReminderTitle)
         content.body = schedule.title
         content.sound = .default
 
