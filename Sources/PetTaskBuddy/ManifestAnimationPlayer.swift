@@ -351,7 +351,7 @@ final class ManifestAnimationPlayer {
             let defaultFrameSize = manifest.frameSize
             let actualWidth = cgImage.width
             let actualHeight = cgImage.height
-            let usesManifestFrameCount = (stateName == PetAnimationState.run.rawValue || stateName == PetAnimationState.poop.rawValue)
+            let usesManifestFrameCount = (stateName == PetAnimationState.idle.rawValue || stateName == PetAnimationState.run.rawValue || stateName == PetAnimationState.poop.rawValue)
                 && state.frames > 0
                 && actualWidth % state.frames == 0
             let frameWidth = usesManifestFrameCount ? actualWidth / state.frames : defaultFrameSize

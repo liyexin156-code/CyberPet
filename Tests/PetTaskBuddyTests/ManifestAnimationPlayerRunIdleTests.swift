@@ -26,6 +26,8 @@ final class ManifestAnimationPlayerRunIdleTests: XCTestCase {
 
         XCTAssertEqual(player.currentAnimationName, PetAnimationState.idle.rawValue)
         XCTAssertNotNil(sprite.texture)
+        XCTAssertEqual(sprite.texture?.size().width, 1024)
+        XCTAssertEqual(sprite.texture?.size().height, 1536)
         XCTAssertEqual(sprite.alpha, 1)
         XCTAssertFalse(sprite.isHidden)
         XCTAssertEqual(sprite.colorBlendFactor, 0)
