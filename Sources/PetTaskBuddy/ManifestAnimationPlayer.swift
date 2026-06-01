@@ -208,12 +208,7 @@ final class ManifestAnimationPlayer {
         sprite?.isHidden = false
         sprite?.alpha = 1
         let firstTextureSize = textures.first?.size() ?? CGSize(width: manifest.frameSize, height: manifest.frameSize)
-        let textureAspectRatio = firstTextureSize.height > 0 ? firstTextureSize.width / firstTextureSize.height : 1
-        let displayHeight = Double(manifest.frameSize) * manifest.scale * PetLayout.spriteDisplayScale
-        sprite?.size = CGSize(
-            width: displayHeight * textureAspectRatio,
-            height: displayHeight
-        )
+        sprite?.size = displaySize(for: stateName, textureSize: firstTextureSize)
         sprite?.texture = textures.first
         sprite?.color = .white
         sprite?.colorBlendFactor = 0
@@ -280,6 +275,16 @@ final class ManifestAnimationPlayer {
             return 1.0 / manifestState.fps
         }
         return PetAutonomousBehaviorConfig.timePerFrame(for: state)
+    }
+
+    private func displaySize(for stateName: String, textureSize: CGSize) -> CGSize {
+        let displayHeight = Double(manifest.frameSize) * manifest.scale * PetLayout.spriteDisplayScale
+        if stateName == PetAnimationState.idle.rawValue {
+            return CGSize(width: displayHeight, height: displayHeight)
+        }
+
+        let textureAspectRatio = textureSize.height > 0 ? textureSize.width / textureSize.height : 1
+        return CGSize(width: displayHeight * textureAspectRatio, height: displayHeight)
     }
 
     private func shouldRouteThroughIdle(target: String) -> Bool {
