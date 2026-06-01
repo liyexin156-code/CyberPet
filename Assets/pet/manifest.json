@@ -16,6 +16,12 @@
       "type": "oneshot",
       "returnTo": "idle"
     },
+    "poop": {
+      "frames": 1,
+      "fps": 2,
+      "type": "once",
+      "returnTo": "idle"
+    },
     "stretch": {
       "frames": 3,
       "fps": 6,

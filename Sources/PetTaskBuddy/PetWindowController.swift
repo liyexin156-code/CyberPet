@@ -33,6 +33,8 @@ final class PetWindowController: NSObject {
     private var hasPlayedStartupSequence = false
     private var isStartupSequenceRunning = false
     private var isRenderingPausedForVisibility = false
+    private var completedEatCount = 0
+    private let poopTriggerEatCount = 2
 
     // Mouse Attention state.
     private var globalMouseMonitor: Any?
@@ -777,6 +779,8 @@ final class PetWindowController: NSObject {
             performManualSideLie()
         case .pee:
             performManualPee()
+        case .poop:
+            performManualPoop()
         case .sit:
             performManualStationary(.sitFront)
         case .happy:
@@ -880,6 +884,34 @@ final class PetWindowController: NSObject {
         movementTimer?.invalidate()
         movementTimer = nil
         playPeeAnimation(isManual: true)
+    }
+
+    private func performManualPoop() {
+        performPoop(isManual: true)
+    }
+
+    private func performPoop(isManual: Bool) {
+        movementTimer?.invalidate()
+        movementTimer = nil
+        behaviorTimer?.invalidate()
+        behaviorTimer = nil
+        scene.playOneCycle(.poop) { [weak self] in
+            guard let self,
+                  !self.isRewarding,
+                  !self.isDragging
+            else { return }
+
+            if isManual {
+                guard self.isManualPerformance, self.currentManualPerformance == .poop else { return }
+                self.isManualPerformance = false
+                self.currentManualPerformance = nil
+            }
+            self.currentBehavior = nil
+            self.movementTimer?.invalidate()
+            self.movementTimer = nil
+            self.scene.forcePlay(.idle)
+            self.scheduleNextBehavior()
+        }
     }
 
     private func performManualSleepy() {
@@ -1150,9 +1182,20 @@ final class PetWindowController: NSObject {
             let elapsed = Date().timeIntervalSince(startedAt)
             PetDebugLog.write("Reward feedback \(kind) finished after \(String(format: "%.2f", elapsed))s")
             self.isRewarding = false
+            if kind == .eat, self.recordCompletedEatingAndShouldPoop() {
+                self.performPoop(isManual: false)
+                return
+            }
             self.scene.applyMoodState(self.petStateEngine.visualState)
             self.startAutonomousBehavior()
         }
+    }
+
+    private func recordCompletedEatingAndShouldPoop() -> Bool {
+        completedEatCount += 1
+        guard completedEatCount >= poopTriggerEatCount else { return false }
+        completedEatCount = 0
+        return true
     }
 
     private func runRewardSmokeTest(kind: PetRewardKind, completion: @escaping () -> Void) {

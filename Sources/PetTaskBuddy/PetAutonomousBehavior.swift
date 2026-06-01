@@ -110,7 +110,7 @@ enum PetAutonomousBehaviorConfig {
             0.45
         case .sniff, .lookFront, .shake, .scratch:
             0.30
-        case .happy, .listless, .eat, .drink, .lieDown, .pee:
+        case .happy, .listless, .eat, .drink, .lieDown, .pee, .poop:
             0.35
         }
     }
@@ -224,6 +224,7 @@ enum PetManualPerformanceKind {
     case sleep
     case sideLie
     case pee
+    case poop
     case sit
     case sniff
     case happy

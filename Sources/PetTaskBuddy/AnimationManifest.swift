@@ -9,6 +9,7 @@ struct AnimationManifest: Decodable {
         enum StateType: String, Decodable {
             case loop
             case oneshot
+            case once
         }
 
         let frames: Int
@@ -41,4 +42,5 @@ enum PetAnimationState: String, CaseIterable {
     case shake
     case scratch
     case pee
+    case poop
 }

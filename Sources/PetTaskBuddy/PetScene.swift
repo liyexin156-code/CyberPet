@@ -331,6 +331,7 @@ final class PetScene: SKScene {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuSniff), action: #selector(ContextMenuTarget.performSniff), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuPee), action: #selector(ContextMenuTarget.performPee), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuPoop), action: #selector(ContextMenuTarget.performPoop), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuShake), action: #selector(ContextMenuTarget.performShake), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuScratch), action: #selector(ContextMenuTarget.performScratch), keyEquivalent: ""))
         menu.addItem(.separator())
@@ -413,6 +414,11 @@ private final class ContextMenuTarget: NSObject {
     @MainActor
     @objc func performPee() {
         request(.pee)
+    }
+
+    @MainActor
+    @objc func performPoop() {
+        request(.poop)
     }
 
     @MainActor

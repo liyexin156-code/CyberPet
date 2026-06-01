@@ -32,6 +32,7 @@ enum LocalizationKey: String, CaseIterable {
     case menuSleepy
     case menuSniff
     case menuPee
+    case menuPoop
     case menuShake
     case menuScratch
     case menuDrinkWater
@@ -154,6 +155,7 @@ final class LocalizationManager: ObservableObject {
             .menuSleepy: "疲惫想睡",
             .menuSniff: "嗅闻一下",
             .menuPee: "尿尿",
+            .menuPoop: "拉屎",
             .menuShake: "抖抖毛",
             .menuScratch: "挠挠痒",
             .menuDrinkWater: "喝水",
@@ -237,6 +239,7 @@ final class LocalizationManager: ObservableObject {
             .menuSleepy: "Sleepy",
             .menuSniff: "Sniff",
             .menuPee: "Pee",
+            .menuPoop: "Poop",
             .menuShake: "Shake",
             .menuScratch: "Scratch",
             .menuDrinkWater: "Drink Water",
