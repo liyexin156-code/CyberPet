@@ -16,6 +16,7 @@ final class PetWindowController: NSObject {
     private let reminderService: ReminderService
 
     private var behaviorTimer: Timer?
+    private var sleepLockTimer: Timer?
     private var movementTimer: Timer?
     private var mousePassthroughTimer: Timer?
     private var lastHitLoggedAnimationName: String?
@@ -25,6 +26,7 @@ final class PetWindowController: NSObject {
     private var currentBehavior: PetAutonomousBehaviorKind?
     private var lastDailyBehavior: PetAutonomousBehaviorKind?
     private var currentManualPerformance: PetManualPerformanceKind?
+    private var activeSleepLock: ActiveSleepLock?
     private var isManualPerformance = false
     private var dragStartWindowOrigin = CGPoint.zero
     private var dragStartMouseLocation = CGPoint.zero
@@ -56,6 +58,17 @@ final class PetWindowController: NSObject {
         let startOrigin: CGPoint
         let restOrigin: CGPoint
         let duration: TimeInterval
+    }
+
+    private struct ActiveSleepLock {
+        let state: PetAnimationState
+        let trigger: SleepTriggerSource
+        let lockUntil: Date
+    }
+
+    private enum SleepTriggerSource: String {
+        case manual
+        case random
     }
 
     // Read from UserDefaults so the user can toggle the animation via settings.
@@ -96,6 +109,7 @@ final class PetWindowController: NSObject {
         visibilityUpdateWork?.cancel()
         NotificationCenter.default.removeObserver(self)
         behaviorTimer?.invalidate()
+        sleepLockTimer?.invalidate()
         movementTimer?.invalidate()
         mousePassthroughTimer?.invalidate()
         manualPerformanceTimers.forEach { $0.invalidate() }
@@ -245,6 +259,7 @@ final class PetWindowController: NSObject {
 
     private func scheduleNextBehavior(after delay: TimeInterval? = nil) {
         guard !isStartupSequenceRunning, !isRenderingPausedForVisibility, !isDragging, !isRewarding, !isManualPerformance else { return }
+        guard !blockIfSleepLocked(attempt: "scheduleNextBehavior") else { return }
         behaviorTimer?.invalidate()
         currentBehavior = nil
 
@@ -357,9 +372,32 @@ final class PetWindowController: NSObject {
         guard !isRenderingPausedForVisibility, !isDragging, !isRewarding, !isManualPerformance else { return }
 
         let animationState = animationState(for: behavior)
+        switch behavior {
+        case .sleep, .lieDown:
+            beginSleepHold(
+                state: animationState,
+                trigger: .random,
+                duration: TimeInterval.random(in: PetAutonomousBehaviorConfig.randomSleepHoldRange)
+            ) { [weak self] in
+                self?.finishAutonomousSleepHold()
+            }
+            return
+        default:
+            break
+        }
+
         scene.playOneCycle(animationState) { [weak self] in
             self?.finishAutonomousBehavior()
         }
+    }
+
+    private func finishAutonomousSleepHold() {
+        guard !isRenderingPausedForVisibility, !isDragging, !isRewarding, !isManualPerformance else { return }
+        currentBehavior = nil
+        movementTimer?.invalidate()
+        movementTimer = nil
+        scene.forcePlay(.idle)
+        scheduleNextBehavior()
     }
 
     private func finishAutonomousBehavior() {
@@ -385,8 +423,18 @@ final class PetWindowController: NSObject {
         playPeeAnimation(isManual: false)
     }
 
-    private func interruptAutonomousBehavior(playIdle: Bool) {
+    @discardableResult
+    private func interruptAutonomousBehavior(
+        playIdle: Bool,
+        attempt: String = "interruptAutonomousBehavior",
+        allowSleepLockInterruption: Bool = false
+    ) -> Bool {
         abortMouseAttention()
+        if isSleepLockActive {
+            logSleepLockInterruptionAttempt(source: attempt, blocked: !allowSleepLockInterruption)
+            guard allowSleepLockInterruption else { return false }
+            endActiveSleepIfNeeded()
+        }
         behaviorTimer?.invalidate()
         behaviorTimer = nil
         manualPerformanceTimers.forEach { $0.invalidate() }
@@ -399,6 +447,7 @@ final class PetWindowController: NSObject {
         if playIdle {
             scene.play(restingStateForCurrentMood())
         }
+        return true
     }
 
     // MARK: - Mouse Attention ("鼠标吸引")
@@ -761,7 +810,11 @@ final class PetWindowController: NSObject {
 
     private func startManualPerformance(_ kind: PetManualPerformanceKind) {
         guard !isRenderingPausedForVisibility, !isDragging, !isRewarding else { return }
-        interruptAutonomousBehavior(playIdle: false)
+        interruptAutonomousBehavior(
+            playIdle: false,
+            attempt: "manual menu \(kind)",
+            allowSleepLockInterruption: true
+        )
         isManualPerformance = true
         currentManualPerformance = kind
         PetDebugLog.write("Manual performance \(kind)")
@@ -871,13 +924,95 @@ final class PetWindowController: NSObject {
     }
 
     private func performManualStationary(_ state: PetAnimationState) {
+        if state == .sleep {
+            beginSleepHold(
+                state: state,
+                trigger: .manual,
+                duration: PetAutonomousBehaviorConfig.manualSleepHoldDuration
+            ) { [weak self] in
+                self?.finishManualPerformance()
+            }
+            return
+        }
+
         scene.play(state)
         scheduleManualFinish(after: manualPerformanceDuration())
     }
 
     private func performManualSideLie() {
-        scene.forcePlay(.lieDown)
-        scheduleManualFinish(after: PetAutonomousBehaviorConfig.manualSideLieHoldDuration)
+        beginSleepHold(
+            state: .lieDown,
+            trigger: .manual,
+            duration: PetAutonomousBehaviorConfig.manualSideLieHoldDuration
+        ) { [weak self] in
+            self?.finishManualPerformance()
+        }
+    }
+
+    private func beginSleepHold(
+        state: PetAnimationState,
+        trigger: SleepTriggerSource,
+        duration: TimeInterval,
+        completion: @escaping () -> Void
+    ) {
+        movementTimer?.invalidate()
+        movementTimer = nil
+        behaviorTimer?.invalidate()
+        behaviorTimer = nil
+        sleepLockTimer?.invalidate()
+        endActiveSleepIfNeeded()
+        let lockUntil = Date().addingTimeInterval(duration)
+        activeSleepLock = ActiveSleepLock(state: state, trigger: trigger, lockUntil: lockUntil)
+
+        PetDebugLog.write("SLEEP LOCK START")
+        PetDebugLog.write("state \(state.rawValue)")
+        PetDebugLog.write("trigger source \(trigger.rawValue)")
+        PetDebugLog.write("duration \(String(format: "%.2f", duration))")
+        PetDebugLog.write("lockUntil timestamp \(sleepLockTimestamp(lockUntil))")
+
+        scene.play(state)
+        let timer = Timer(timeInterval: duration, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, !self.isRewarding, !self.isDragging else { return }
+                self.endActiveSleepIfNeeded()
+                completion()
+            }
+        }
+        sleepLockTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func endActiveSleepIfNeeded() {
+        guard activeSleepLock != nil else { return }
+        PetDebugLog.write("SLEEP LOCK END")
+        activeSleepLock = nil
+        sleepLockTimer?.invalidate()
+        sleepLockTimer = nil
+    }
+
+    private var isSleepLockActive: Bool {
+        guard let activeSleepLock else { return false }
+        if Date() < activeSleepLock.lockUntil {
+            return true
+        }
+        return false
+    }
+
+    private func blockIfSleepLocked(attempt: String) -> Bool {
+        guard isSleepLockActive else { return false }
+        logSleepLockInterruptionAttempt(source: attempt, blocked: true)
+        return true
+    }
+
+    private func logSleepLockInterruptionAttempt(source: String, blocked: Bool) {
+        let state = activeSleepLock?.state.rawValue ?? "none"
+        let trigger = activeSleepLock?.trigger.rawValue ?? "none"
+        let lockUntil = activeSleepLock.map { sleepLockTimestamp($0.lockUntil) } ?? "none"
+        PetDebugLog.write("SLEEP LOCK interruption attempt source=\(source) state=\(state) trigger source=\(trigger) lockUntil timestamp=\(lockUntil) blocked=\(blocked)")
+    }
+
+    private func sleepLockTimestamp(_ date: Date) -> String {
+        ISO8601DateFormatter().string(from: date)
     }
 
     private func performManualPee() {
@@ -1094,7 +1229,7 @@ final class PetWindowController: NSObject {
             return
         }
 
-        if finishingManualPerformance == .walk || finishingManualPerformance == .roam || finishingManualPerformance == .sideLie {
+        if finishingManualPerformance == .walk || finishingManualPerformance == .roam || finishingManualPerformance == .sleep || finishingManualPerformance == .sideLie {
             scene.forcePlay(.idle)
             scheduleNextBehavior()
             return
@@ -1150,14 +1285,15 @@ final class PetWindowController: NSObject {
 
     private func configurePetStateCallbacks() {
         petStateEngine.onMoodStateChange = { [weak self] state in
-            guard let self,
-                  !self.isStartupSequenceRunning,
+            guard let self else { return }
+            guard !self.blockIfSleepLocked(attempt: "mood state \(state.rawValue)") else { return }
+            guard !self.isStartupSequenceRunning,
                   !self.isRewarding,
                   !self.isDragging,
                   !self.isManualPerformance,
-                  self.currentBehavior == nil,
-                  self.behaviorTimer == nil
+                  self.currentBehavior == nil
             else { return }
+            guard self.behaviorTimer == nil else { return }
             if state == .happy, self.behaviorTimer != nil {
                 return
             }
@@ -1174,7 +1310,10 @@ final class PetWindowController: NSObject {
 
     private func performReward(kind: PetRewardKind) {
         isRewarding = true
-        interruptAutonomousBehavior(playIdle: false)
+        guard interruptAutonomousBehavior(playIdle: false, attempt: "reward \(kind)") else {
+            isRewarding = false
+            return
+        }
         let startedAt = Date()
         PetDebugLog.write("Reward feedback \(kind) started")
         scene.performReward(kind) { [weak self] in
@@ -1200,7 +1339,11 @@ final class PetWindowController: NSObject {
 
     private func runRewardSmokeTest(kind: PetRewardKind, completion: @escaping () -> Void) {
         isRewarding = true
-        interruptAutonomousBehavior(playIdle: false)
+        guard interruptAutonomousBehavior(playIdle: false, attempt: "reward smoke \(kind)") else {
+            isRewarding = false
+            completion()
+            return
+        }
         let startedAt = Date()
         PetDebugLog.write("Reward smoke \(kind) started")
         scene.performReward(kind) { [weak self] in
@@ -1213,7 +1356,7 @@ final class PetWindowController: NSObject {
     }
 
     private func showReminderBubble(_ message: String) {
-        interruptAutonomousBehavior(playIdle: true)
+        guard interruptAutonomousBehavior(playIdle: true, attempt: "reminder bubble") else { return }
         scene.showBubble(message)
         scheduleNextBehavior(after: PetAutonomousBehaviorConfig.reminderPauseBeforeNextBehavior)
     }
@@ -1224,7 +1367,11 @@ final class PetWindowController: NSObject {
 
     private func performReminder(_ schedule: ScheduleItem, completion: (() -> Void)?) {
         isRewarding = true
-        interruptAutonomousBehavior(playIdle: false)
+        guard interruptAutonomousBehavior(playIdle: false, attempt: "reminder action") else {
+            isRewarding = false
+            completion?()
+            return
+        }
         scene.showBubble(schedule.title)
         PetDebugLog.write("Pet reminder action started: \(schedule.title)")
         scene.performReward(ReminderTriggerConfig.reminderRewardKind) { [weak self] in
@@ -1457,7 +1604,10 @@ extension PetWindowController: PetSceneDelegate {
     func petSceneDidBeginDrag(_ scene: PetScene) {
         isDragging = true
         isRewarding = false
-        interruptAutonomousBehavior(playIdle: true)
+        guard interruptAutonomousBehavior(playIdle: true, attempt: "drag") else {
+            isDragging = false
+            return
+        }
         dragStartWindowOrigin = window.frame.origin
         dragStartMouseLocation = NSEvent.mouseLocation
     }

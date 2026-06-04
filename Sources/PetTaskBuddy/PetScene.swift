@@ -81,6 +81,18 @@ final class PetScene: SKScene {
         animationPlayer?.duration(for: state) ?? 0
     }
 
+    func setDogScale(_ scale: CGFloat) {
+        let clampedScale = DogSizeSettings.clampedScale(scale)
+        if let animationPlayer {
+            animationPlayer.dogScale = clampedScale
+        } else {
+            petNode.size = CGSize(
+                width: 160 * PetLayout.spriteDisplayScale * clampedScale,
+                height: 160 * PetLayout.spriteDisplayScale * clampedScale
+            )
+        }
+    }
+
     func faceRight(_ isFacingRight: Bool) {
         petNode.xScale = isFacingRight ? abs(petNode.xScale) : -abs(petNode.xScale)
     }
@@ -266,7 +278,8 @@ final class PetScene: SKScene {
             NSLog("[PetAnimation] Could not find Assets/pet/manifest.json in bundle resources or development directory.")
             petNode.color = .systemTeal
             petNode.colorBlendFactor = 1
-            petNode.size = CGSize(width: 160 * PetLayout.spriteDisplayScale, height: 160 * PetLayout.spriteDisplayScale)
+            let scale = DogSizeSettings.shared.scale
+            petNode.size = CGSize(width: 160 * PetLayout.spriteDisplayScale * scale, height: 160 * PetLayout.spriteDisplayScale * scale)
             return
         }
 
@@ -274,7 +287,8 @@ final class PetScene: SKScene {
             NSLog("[PetAnimation] Pet resource directory found, but manifest.json is missing: \(resourceDirectory.path)")
             petNode.color = .systemTeal
             petNode.colorBlendFactor = 1
-            petNode.size = CGSize(width: 160 * PetLayout.spriteDisplayScale, height: 160 * PetLayout.spriteDisplayScale)
+            let scale = DogSizeSettings.shared.scale
+            petNode.size = CGSize(width: 160 * PetLayout.spriteDisplayScale * scale, height: 160 * PetLayout.spriteDisplayScale * scale)
             return
         }
 
@@ -286,16 +300,20 @@ final class PetScene: SKScene {
             NSLog("[PetAnimation] Failed to decode pet manifest at \(manifestURL.path): \(error)")
             petNode.color = .systemTeal
             petNode.colorBlendFactor = 1
-            petNode.size = CGSize(width: 160 * PetLayout.spriteDisplayScale, height: 160 * PetLayout.spriteDisplayScale)
+            let scale = DogSizeSettings.shared.scale
+            petNode.size = CGSize(width: 160 * PetLayout.spriteDisplayScale * scale, height: 160 * PetLayout.spriteDisplayScale * scale)
             return
         }
 
+        let dogScale = DogSizeSettings.shared.scale
         petNode.colorBlendFactor = 0
         petNode.size = CGSize(
-            width: Double(manifest.frameSize) * manifest.scale * PetLayout.spriteDisplayScale,
-            height: Double(manifest.frameSize) * manifest.scale * PetLayout.spriteDisplayScale
+            width: Double(manifest.frameSize) * manifest.scale * PetLayout.spriteDisplayScale * Double(dogScale),
+            height: Double(manifest.frameSize) * manifest.scale * PetLayout.spriteDisplayScale * Double(dogScale)
         )
-        animationPlayer = ManifestAnimationPlayer(sprite: petNode, manifest: manifest, resourceDirectory: resourceDirectory)
+        let player = ManifestAnimationPlayer(sprite: petNode, manifest: manifest, resourceDirectory: resourceDirectory)
+        player.dogScale = dogScale
+        animationPlayer = player
     }
 
     private func rewardNode(kind: PetRewardKind) -> SKNode {
@@ -335,12 +353,20 @@ final class PetScene: SKScene {
         menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuShake), action: #selector(ContextMenuTarget.performShake), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuScratch), action: #selector(ContextMenuTarget.performScratch), keyEquivalent: ""))
         menu.addItem(.separator())
+        menu.addItem(dogSizeMenuItem())
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuLanguageSwitch), action: #selector(ContextMenuTarget.toggleLanguage), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: LocalizationManager.shared.string(.menuQuit), action: #selector(ContextMenuTarget.exit), keyEquivalent: "q"))
         ContextMenuTarget.shared.scene = self
         menu.items.forEach { $0.target = ContextMenuTarget.shared }
         NSMenu.popUpContextMenu(menu, with: event, for: view ?? NSView())
+    }
+
+    private func dogSizeMenuItem() -> NSMenuItem {
+        let item = NSMenuItem()
+        item.view = DogSizeMenuView(scene: self)
+        return item
     }
 }
 
@@ -359,6 +385,72 @@ enum PetResourceLocator {
     static func manifestURL(in petDirectory: URL) -> URL? {
         let url = petDirectory.appendingPathComponent("manifest.json")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+}
+
+private final class DogSizeMenuView: NSView {
+    private weak var scene: PetScene?
+    private let slider = NSSlider()
+    private let valueLabel = NSTextField(labelWithString: "")
+
+    init(scene: PetScene) {
+        self.scene = scene
+        super.init(frame: NSRect(x: 0, y: 0, width: 240, height: 78))
+        buildView()
+        updateValueLabel()
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    private func buildView() {
+        let title = NSTextField(labelWithString: LocalizationManager.shared.string(.menuDogSize))
+        title.font = .systemFont(ofSize: 13, weight: .semibold)
+        title.frame = NSRect(x: 12, y: 52, width: 126, height: 18)
+
+        valueLabel.alignment = .right
+        valueLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        valueLabel.frame = NSRect(x: 146, y: 52, width: 82, height: 18)
+
+        slider.identifier = NSUserInterfaceItemIdentifier("cyberpet-dog-size-slider")
+        slider.minValue = DogSizeSettings.minimumPercent
+        slider.maxValue = DogSizeSettings.maximumPercent
+        slider.doubleValue = DogSizeSettings.shared.percent
+        slider.isContinuous = true
+        slider.target = self
+        slider.action = #selector(dogSizeSliderChanged(_:))
+        slider.frame = NSRect(x: 12, y: 25, width: 216, height: 20)
+
+        let resetButton = NSButton(title: LocalizationManager.shared.string(.menuDogSizeReset), target: self, action: #selector(resetDogSize))
+        resetButton.bezelStyle = .rounded
+        resetButton.controlSize = .small
+        resetButton.font = .systemFont(ofSize: 11)
+        resetButton.frame = NSRect(x: 12, y: 2, width: 82, height: 20)
+
+        addSubview(title)
+        addSubview(valueLabel)
+        addSubview(slider)
+        addSubview(resetButton)
+    }
+
+    @MainActor
+    @objc private func dogSizeSliderChanged(_ sender: NSSlider) {
+        DogSizeSettings.shared.setPercent(sender.doubleValue)
+        scene?.setDogScale(DogSizeSettings.shared.scale)
+        updateValueLabel()
+    }
+
+    @MainActor
+    @objc private func resetDogSize() {
+        DogSizeSettings.shared.reset()
+        slider.doubleValue = DogSizeSettings.shared.percent
+        scene?.setDogScale(DogSizeSettings.shared.scale)
+        updateValueLabel()
+    }
+
+    private func updateValueLabel() {
+        valueLabel.stringValue = "\(Int(round(DogSizeSettings.shared.percent)))%"
     }
 }
 

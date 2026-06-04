@@ -75,6 +75,15 @@ final class ManifestAnimationPlayer {
     private var currentState: String?
     private var queuedState: (name: String, completion: (() -> Void)?)?
     private var isOneShotRunning = false
+    private var currentDogScale: CGFloat = 1
+
+    var dogScale: CGFloat {
+        get { currentDogScale }
+        set {
+            currentDogScale = DogSizeSettings.clampedScale(newValue)
+            updateCurrentDisplaySize()
+        }
+    }
 
     init(sprite: SKSpriteNode, manifest: AnimationManifest, resourceDirectory: URL) {
         self.sprite = sprite
@@ -278,13 +287,21 @@ final class ManifestAnimationPlayer {
     }
 
     private func displaySize(for stateName: String, textureSize: CGSize) -> CGSize {
-        let displayHeight = Double(manifest.frameSize) * manifest.scale * PetLayout.spriteDisplayScale
+        let displayHeight = Double(manifest.frameSize) * manifest.scale * PetLayout.spriteDisplayScale * Double(currentDogScale)
         if stateName == PetAnimationState.idle.rawValue {
             return CGSize(width: displayHeight, height: displayHeight)
         }
 
         let textureAspectRatio = textureSize.height > 0 ? textureSize.width / textureSize.height : 1
         return CGSize(width: displayHeight * textureAspectRatio, height: displayHeight)
+    }
+
+    private func updateCurrentDisplaySize() {
+        guard let stateName = currentState,
+              let textures = texturesByState[stateName],
+              let firstTexture = textures.first
+        else { return }
+        sprite?.size = displaySize(for: stateName, textureSize: firstTexture.size())
     }
 
     private func shouldRouteThroughIdle(target: String) -> Bool {
@@ -310,6 +327,7 @@ final class ManifestAnimationPlayer {
         }
 
         sprite?.texture = firstTexture
+        sprite?.size = displaySize(for: PetAnimationState.idle.rawValue, textureSize: firstTexture.size())
         sprite?.color = .white
         sprite?.colorBlendFactor = 0
         sprite?.isHidden = false

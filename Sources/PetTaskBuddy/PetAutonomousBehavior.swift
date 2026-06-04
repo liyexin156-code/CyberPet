@@ -67,7 +67,9 @@ enum PetAutonomousBehaviorConfig {
     static let manualPerformanceDurationRange: ClosedRange<TimeInterval> = 15...30
     static let manualPerformanceStepGap: TimeInterval = 0.35
     static let manualSleepLieDownHold: TimeInterval = 1.4
-    static let manualSideLieHoldDuration: TimeInterval = 180
+    static let manualSleepHoldDuration: TimeInterval = 180
+    static let manualSideLieHoldDuration: TimeInterval = manualSleepHoldDuration
+    static let randomSleepHoldRange: ClosedRange<TimeInterval> = 120...300
     static let sniffPeeChance: Double = 0.25
     static let peeHoldDuration: TimeInterval = 3.0
 
@@ -76,8 +78,6 @@ enum PetAutonomousBehaviorConfig {
     static let sniffHoldRange: ClosedRange<TimeInterval> = 4.0...7.0
     static let activeOneShotHoldRange: ClosedRange<TimeInterval> = 3.0...5.5
     static let stretchHoldRange: ClosedRange<TimeInterval> = 2.0...5.0
-    static let lieDownHoldRange: ClosedRange<TimeInterval> = 20.0...45.0
-    static let sleepHoldRange: ClosedRange<TimeInterval> = 12.0...28.0
     static let listlessHoldRange: ClosedRange<TimeInterval> = 14.0...28.0
 
     static let walkDistanceRange: ClosedRange<Double> = 72...190
@@ -205,10 +205,8 @@ enum PetAutonomousBehaviorConfig {
             stretchHoldRange
         case .yawn, .shake, .scratch:
             activeOneShotHoldRange
-        case .lieDown:
-            lieDownHoldRange
-        case .sleep:
-            sleepHoldRange
+        case .sleep, .lieDown:
+            randomSleepHoldRange
         case .listless:
             listlessHoldRange
         case .walk:

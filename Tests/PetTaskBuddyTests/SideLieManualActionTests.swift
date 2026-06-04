@@ -18,17 +18,19 @@ final class SideLieManualActionTests: XCTestCase {
         XCTAssertTrue(sceneSource.contains("request(.sideLie)"))
     }
 
-    func testSideLieUsesLieDownForThreeMinutesThenRestoresIdle() throws {
+    func testSideLieUsesSharedSleepHoldForThreeMinutesThenRestoresIdle() throws {
         let behaviorSource = try source("Sources/PetTaskBuddy/PetAutonomousBehavior.swift")
         let controllerSource = try source("Sources/PetTaskBuddy/PetWindowController.swift")
 
-        XCTAssertTrue(behaviorSource.contains("static let manualSideLieHoldDuration: TimeInterval = 180"))
+        XCTAssertTrue(behaviorSource.contains("static let manualSideLieHoldDuration: TimeInterval = manualSleepHoldDuration"))
         XCTAssertTrue(behaviorSource.contains("case sideLie"))
         XCTAssertTrue(controllerSource.contains("case .sideLie:"))
         XCTAssertTrue(controllerSource.contains("performManualSideLie()"))
 
         let sideLieBody = try XCTUnwrap(extractFunction("performManualSideLie", from: controllerSource))
-        XCTAssertTrue(sideLieBody.contains("scene.forcePlay(.lieDown)"))
+        XCTAssertTrue(sideLieBody.contains("beginSleepHold"))
+        XCTAssertTrue(sideLieBody.contains("state: .lieDown"))
+        XCTAssertTrue(sideLieBody.contains("trigger: .manual"))
         XCTAssertTrue(sideLieBody.contains("PetAutonomousBehaviorConfig.manualSideLieHoldDuration"))
 
         let finishBody = try XCTUnwrap(extractFunction("finishManualPerformance", from: controllerSource))

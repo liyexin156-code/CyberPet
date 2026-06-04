@@ -36,6 +36,8 @@ enum LocalizationKey: String, CaseIterable {
     case menuShake
     case menuScratch
     case menuDrinkWater
+    case menuDogSize
+    case menuDogSizeReset
     case menuLanguageSwitch
     case menuQuit
 
@@ -159,6 +161,8 @@ final class LocalizationManager: ObservableObject {
             .menuShake: "抖抖毛",
             .menuScratch: "挠挠痒",
             .menuDrinkWater: "喝水",
+            .menuDogSize: "狗狗大小",
+            .menuDogSizeReset: "默认",
             .menuLanguageSwitch: "Language: English",
             .menuQuit: "退出",
 
@@ -243,6 +247,8 @@ final class LocalizationManager: ObservableObject {
             .menuShake: "Shake",
             .menuScratch: "Scratch",
             .menuDrinkWater: "Drink Water",
+            .menuDogSize: "Dog Size",
+            .menuDogSizeReset: "Reset",
             .menuLanguageSwitch: "语言：中文",
             .menuQuit: "Quit",
 
